@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Multi-Ask</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box}
+
+    :root, body.dark{
+      --bg:#1a1a22;--sf:#232330;--sf2:#2a2a38;
+      --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.15);
+      --tx:#f0f0f4;--tx2:#b0b0bc;--tx3:#78788a;
+      --accent:#818cf8;--accent-bg:#6366f1;
+      --chatgpt:#34d399;--claude:#fbbf24;--gemini:#60a5fa;--perplexity:#22d3ee;
+      --ok:#4ade80;--err:#f87171;
+      --chip-active-bg:rgba(255,255,255,.06);
+      --input-bg:#2a2a38;
+      --send-hover:#4f46e5;
+      --card-send-hover:rgba(255,255,255,.05);
+      --shadow:0 1px 4px rgba(0,0,0,.2);
+      --go-bg:rgba(255,255,255,.06);--go-hover:rgba(255,255,255,.12);
+      --fav-bg:rgba(255,255,255,.04);--fav-hover:rgba(255,255,255,.08);
+      --hist-bg:rgba(255,255,255,.03);--hist-hover:rgba(255,255,255,.06);
+      --danger:#f87171;
+    }
+
+    body.light{
+      --bg:#f0f0f4;--sf:#ffffff;--sf2:#eaeaef;
+      --bd:rgba(0,0,0,.08);--bd2:rgba(0,0,0,.15);
+      --tx:#1a1a22;--tx2:#55556a;--tx3:#8888a0;
+      --accent:#6366f1;--accent-bg:#6366f1;
+      --ok:#16a34a;--err:#dc2626;
+      --chip-active-bg:rgba(0,0,0,.05);
+      --input-bg:#ffffff;
+      --send-hover:#4338ca;
+      --card-send-hover:rgba(0,0,0,.04);
+      --shadow:0 1px 4px rgba(0,0,0,.07);
+      --go-bg:rgba(0,0,0,.04);--go-hover:rgba(0,0,0,.08);
+      --fav-bg:rgba(0,0,0,.03);--fav-hover:rgba(0,0,0,.06);
+      --hist-bg:rgba(0,0,0,.02);--hist-hover:rgba(0,0,0,.05);
+      --danger:#dc2626;
+    }
+
+    body{
+      font-family:'Noto Sans KR',-apple-system,sans-serif;
+      background:var(--bg);color:var(--tx);
+      height:100vh;display:flex;flex-direction:column;overflow:hidden;
+    }
+
+    /* ── Header ── */
+    .hdr{
+      padding:14px 16px 12px;display:flex;align-items:center;gap:10px;
+      border-bottom:1px solid var(--bd);flex-shrink:0;
+      background:var(--sf);box-shadow:var(--shadow);
+    }
+    .logo{width:28px;height:28px;background:linear-gradient(135deg,#6366f1,#ec4899,#f59e0b);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff}
+    .hdr h1{font-size:14px;font-weight:700}
+    .hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+    .hdr small{font-size:9px;color:var(--tx3);background:var(--sf2);padding:2px 7px;border-radius:8px}
+
+    /* ── Filter Button + Dropdown ── */
+    .filter-wrap{position:relative}
+    .filter-btn{
+      width:28px;height:28px;border-radius:7px;border:1px solid var(--bd);
+      background:var(--go-bg);color:var(--tx3);cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      transition:all .15s;
+    }
+    .filter-btn:hover{background:var(--go-hover);color:var(--tx);border-color:var(--bd2)}
+    .filter-btn.has-filter{color:var(--accent);border-color:var(--accent)}
+    .filter-btn svg{width:14px;height:14px}
+    .filter-dropdown{
+      display:none;position:absolute;top:34px;right:0;z-index:100;
+      background:var(--sf);border:1px solid var(--bd2);border-radius:10px;
+      box-shadow:0 8px 24px rgba(0,0,0,.3);padding:6px 0;min-width:160px;
+    }
+    .filter-dropdown.open{display:block}
+    .filter-item{
+      display:flex;align-items:center;gap:8px;padding:8px 14px;
+      cursor:pointer;transition:background .1s;font-size:11px;color:var(--tx2);
+      user-select:none;
+    }
+    .filter-item:hover{background:var(--go-hover)}
+    .filter-item .fi-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .filter-item .fi-name{flex:1}
+    .filter-item .fi-check{
+      width:16px;height:16px;border-radius:4px;border:1.5px solid var(--bd2);
+      display:flex;align-items:center;justify-content:center;transition:all .15s;
+    }
+    .filter-item.on .fi-check{background:var(--accent-bg);border-color:var(--accent-bg)}
+    .filter-item.on .fi-check svg{display:block}
+    .filter-item:not(.on) .fi-check svg{display:none}
+    .filter-item .fi-check svg{width:10px;height:10px;color:#fff}
+
+    /* ── Settings Dropdown ── */
+    .settings-wrap{position:relative}
+    .settings-dropdown{
+      display:none;position:absolute;top:34px;right:0;z-index:100;
+      background:var(--sf);border:1px solid var(--bd2);border-radius:10px;
+      box-shadow:0 8px 24px rgba(0,0,0,.3);padding:12px;min-width:220px;
+    }
+    .settings-dropdown.open{display:block}
+    .sd-title{font-size:11px;font-weight:600;color:var(--tx);margin-bottom:2px}
+    .sd-desc{font-size:9px;color:var(--tx3);margin-bottom:8px}
+    .sd-input{
+      width:100%;min-height:60px;max-height:120px;padding:8px 10px;
+      border-radius:8px;border:1px solid var(--bd);background:var(--input-bg);
+      color:var(--tx);font-family:inherit;font-size:11px;line-height:1.4;
+      resize:vertical;outline:none;transition:border-color .15s;
+    }
+    .sd-input:focus{border-color:rgba(99,102,241,.4)}
+    .sd-input::placeholder{color:var(--tx3)}
+    .sd-presets{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+    .sd-preset{
+      padding:4px 8px;border-radius:6px;font-size:9.5px;
+      background:var(--fav-bg);border:1px solid var(--bd);
+      color:var(--tx2);cursor:pointer;transition:all .12s;user-select:none;
+    }
+    .sd-preset:hover{background:var(--fav-hover);color:var(--tx);border-color:var(--bd2)}
+    .sd-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:10px}
+    .sd-clear,.sd-save{
+      padding:5px 12px;border-radius:6px;font-family:inherit;font-size:10px;
+      cursor:pointer;transition:all .12s;border:1px solid var(--bd);
+    }
+    .sd-clear{background:transparent;color:var(--tx3)}
+    .sd-clear:hover{background:var(--fav-hover);color:var(--tx)}
+    .sd-save{background:var(--accent-bg);color:#fff;border-color:var(--accent-bg)}
+    .sd-save:hover{background:var(--send-hover)}
+    .filter-btn.has-sys{color:var(--accent);border-color:var(--accent)}
+    .sd-mode-tabs{display:flex;gap:0;margin-bottom:8px;border-radius:6px;overflow:hidden;border:1px solid var(--bd)}
+    .sd-tab{
+      flex:1;padding:5px 0;border:none;background:transparent;
+      color:var(--tx3);font-family:inherit;font-size:10px;font-weight:500;
+      cursor:pointer;transition:all .12s;
+    }
+    .sd-tab.active{background:var(--accent-bg);color:#fff}
+    .sd-tab:not(.active):hover{background:var(--go-hover)}
+    .sd-panel{max-height:280px;overflow-y:auto}
+    .sd-ai-item{margin-bottom:8px}
+    .sd-ai-label{font-size:10px;font-weight:500;color:var(--tx2);display:flex;align-items:center;gap:5px;margin-bottom:3px}
+    .sd-ai-dot{width:6px;height:6px;border-radius:50%}
+    .sd-input-sm{min-height:40px;font-size:10px!important}
+    .sys-badge{
+      font-size:8px;color:var(--accent);background:rgba(99,102,241,.15);
+      padding:1px 5px;border-radius:4px;font-weight:500;
+      max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+
+    /* ── Unified Input ── */
+    .unified{padding:12px 16px;border-bottom:1px solid var(--bd);flex-shrink:0;background:var(--sf)}
+    .unified-label{font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+    .unified-label svg{width:14px;height:14px}
+    .uni-shortcut{font-size:8px;color:var(--tx3);font-weight:400;opacity:.6}
+    .auto-switch-inline{
+      margin-left:auto;display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none;
+    }
+    .auto-switch-text{font-size:9px;color:var(--tx3);font-weight:400}
+    .toggle-switch{
+      position:relative;width:26px;height:14px;
+      background:var(--bd2);border-radius:7px;
+      cursor:pointer;transition:background .2s;flex-shrink:0;
+    }
+    .toggle-switch.on{background:var(--accent-bg)}
+    .toggle-knob{
+      position:absolute;top:2px;left:2px;
+      width:10px;height:10px;border-radius:50%;
+      background:#fff;transition:left .2s;
+    }
+    .toggle-switch.on .toggle-knob{left:14px}
+
+    .chips{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap}
+    .chip{display:flex;align-items:center;gap:4px;padding:5px 11px;border-radius:14px;font-size:10.5px;font-weight:500;cursor:pointer;user-select:none;border:1px solid var(--bd);background:transparent;color:var(--tx3);transition:all .15s}
+    .chip.active{border-color:var(--bd2);background:var(--chip-active-bg);color:var(--tx)}
+    .chip.filtered{display:none}
+    .chip .dot{width:7px;height:7px;border-radius:50%}
+    .chip.chatgpt .dot{background:var(--chatgpt)}
+    .chip.claude .dot{background:var(--claude)}
+    .chip.gemini .dot{background:var(--gemini)}
+    .chip.perplexity .dot{background:var(--perplexity)}
+    .u-row{display:flex;background:var(--input-bg);border:1px solid var(--bd);border-radius:10px;overflow:hidden;transition:border-color .15s;box-shadow:var(--shadow)}
+    .u-row:focus-within{border-color:rgba(99,102,241,.45)}
+    .u-row textarea{flex:1;min-height:40px;max-height:100px;padding:10px 12px;background:transparent;border:none;outline:none;color:var(--tx);font-family:inherit;font-size:12px;line-height:1.5;resize:none}
+    .u-row textarea::placeholder{color:var(--tx3)}
+    .u-send{padding:0 14px;background:var(--accent-bg);color:#fff;border:none;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;transition:background .15s;white-space:nowrap}
+    .u-send:hover{background:var(--send-hover)}
+    .u-send:disabled{opacity:.3;cursor:not-allowed}
+    .u-send svg{width:12px;height:12px}
+
+    /* ── Main scroll ── */
+    .main-scroll{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+
+    /* ── AI Cards ── */
+    #cards{display:flex;flex-direction:column;gap:10px}
+    .ai-card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;overflow:hidden;flex-shrink:0;transition:all .2s;box-shadow:var(--shadow)}
+    .ai-card:hover{border-color:var(--bd2)}
+    .ai-card.hidden{display:none}
+    .ai-card.dragging{opacity:.4;border-color:var(--accent);box-shadow:0 4px 16px rgba(99,102,241,.3)}
+    .ai-card.drag-over{border-color:var(--accent);border-top:2px solid var(--accent)}
+    .card-top{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .15s;user-select:none}
+    .card-top:hover{background:var(--go-hover)}
+    .card-drag{cursor:grab;color:var(--tx3);display:flex;align-items:center;padding:2px;opacity:.4;transition:opacity .15s}
+    .card-drag:hover{opacity:1}
+    .card-drag:active{cursor:grabbing}
+    .card-drag svg{width:12px;height:12px}
+    .card-dot{width:9px;height:9px;border-radius:50%}
+    .card-name{font-size:13px;font-weight:600;flex:1}
+    .tab-status-dot{width:7px;height:7px;border-radius:50%;opacity:.2;transition:opacity .3s}
+    .tab-status-dot.open{opacity:1}
+    .card-copy{
+      padding:3px 8px;border-radius:6px;background:var(--go-bg);border:none;
+      color:var(--tx3);cursor:pointer;transition:all .12s;display:flex;align-items:center;gap:3px;
+      font-family:inherit;font-size:10px;
+    }
+    .card-copy:hover{background:var(--go-hover);color:var(--tx)}
+    .card-copy svg{width:12px;height:12px}
+    .card-copy.copied{color:var(--ok)}
+    .card-input{display:flex;gap:0}
+    .card-input textarea{flex:1;min-height:36px;max-height:80px;padding:9px 12px;background:transparent;border:none;outline:none;color:var(--tx);font-family:inherit;font-size:11.5px;line-height:1.4;resize:none}
+    .card-input textarea::placeholder{color:var(--tx3);font-size:10.5px}
+    .card-send{padding:0 11px;border:none;border-left:1px solid var(--bd);background:transparent;color:var(--tx3);cursor:pointer;transition:all .12s;display:flex;align-items:center}
+    .card-send:hover{background:var(--card-send-hover);color:var(--accent)}
+    .card-send svg{width:13px;height:13px}
+
+    /* ── Section ── */
+    .section{flex-shrink:0;margin-top:6px}
+    .section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .section-title{font-size:11px;font-weight:600;color:var(--tx2);display:flex;align-items:center;gap:5px}
+    .section-title svg{width:13px;height:13px}
+    .section-action{font-size:9px;color:var(--tx3);cursor:pointer;padding:2px 7px;border-radius:5px;border:1px solid var(--bd);background:transparent;font-family:inherit;transition:all .12s}
+    .section-action:hover{background:var(--fav-hover);color:var(--tx)}
+
+    /* ── Favorites ── */
+    .fav-list{display:flex;flex-wrap:wrap;gap:5px}
+    .fav-chip{display:flex;align-items:center;gap:3px;padding:5px 10px;border-radius:8px;font-size:10.5px;color:var(--tx2);background:var(--fav-bg);border:1px solid var(--bd);cursor:pointer;transition:all .12s;user-select:none;white-space:nowrap}
+    .fav-chip:hover{background:var(--fav-hover);color:var(--tx);border-color:var(--bd2)}
+    .fav-chip svg{width:10px;height:10px;opacity:.5}
+    .fav-chip .fav-del{margin-left:2px;opacity:0;transition:opacity .15s;cursor:pointer;color:var(--danger)}
+    .fav-chip:hover .fav-del{opacity:1}
+    .fav-add-row{display:flex;gap:4px;margin-top:6px}
+    .fav-add-row input{flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--input-bg);color:var(--tx);font-family:inherit;font-size:10px;outline:none;transition:border-color .15s}
+    .fav-add-row input:focus{border-color:rgba(99,102,241,.4)}
+    .fav-add-row input::placeholder{color:var(--tx3)}
+    .fav-add-btn{padding:5px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--fav-bg);color:var(--tx2);font-family:inherit;font-size:10px;cursor:pointer;transition:all .12s;white-space:nowrap}
+    .fav-add-btn:hover{background:var(--accent-bg);color:#fff;border-color:var(--accent-bg)}
+
+    /* ── History ── */
+    .hist-list{display:flex;flex-direction:column;gap:4px}
+    .hist-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:var(--hist-bg);border:1px solid transparent;cursor:pointer;transition:all .12s}
+    .hist-item:hover{background:var(--hist-hover);border-color:var(--bd)}
+    .hist-text{flex:1;font-size:11px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .hist-item:hover .hist-text{color:var(--tx)}
+    .hist-targets{display:flex;gap:2px}
+    .hist-dot{width:5px;height:5px;border-radius:50%}
+    .hist-time{font-size:9px;color:var(--tx3);white-space:nowrap}
+    .hist-empty{font-size:10px;color:var(--tx3);font-style:italic;padding:8px 0}
+
+    /* ── Toast ── */
+    .toast-area{padding:6px 16px 10px;flex-shrink:0;max-height:60px;overflow-y:auto}
+    .toast-item{font-size:10px;padding:2px 0;color:var(--tx3);display:flex;align-items:center;gap:4px;animation:fi .2s ease}
+    .toast-item.ok{color:var(--ok)}.toast-item.er{color:var(--err)}.toast-item.in{color:#60a5fa}
+    @keyframes fi{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:translateY(0)}}
+
+    ::-webkit-scrollbar{width:3px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:rgba(128,128,128,.25);border-radius:2px}
+  </style>
+</head>
+<body class="light">
+
+  <div class="hdr">
+    <div class="logo">M</div>
+    <h1>AI Multi-Ask</h1>
+    <div class="hdr-right">
+      <div class="filter-wrap">
+        <button class="filter-btn" id="filterBtn" title="AI 필터">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
+        <div class="filter-dropdown" id="filterDropdown">
+          <div class="filter-item on" data-t="chatgpt">
+            <div class="fi-dot" style="background:var(--chatgpt)"></div>
+            <div class="fi-name">ChatGPT</div>
+            <div class="fi-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+          <div class="filter-item on" data-t="claude">
+            <div class="fi-dot" style="background:var(--claude)"></div>
+            <div class="fi-name">Claude</div>
+            <div class="fi-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+          <div class="filter-item on" data-t="gemini">
+            <div class="fi-dot" style="background:var(--gemini)"></div>
+            <div class="fi-name">Gemini</div>
+            <div class="fi-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+          <div class="filter-item on" data-t="perplexity">
+            <div class="fi-dot" style="background:var(--perplexity)"></div>
+            <div class="fi-name">Perplexity</div>
+            <div class="fi-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-wrap">
+        <button class="filter-btn" id="settingsBtn" title="시스템 프롬프트 설정">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
+        <div class="settings-dropdown" id="settingsDropdown">
+          <div class="sd-title">시스템 프롬프트</div>
+          <div class="sd-mode-tabs">
+            <button class="sd-tab active" data-mode="global">전체</button>
+            <button class="sd-tab" data-mode="each">AI별</button>
+          </div>
+
+          <!-- 전체 모드 -->
+          <div class="sd-panel" id="sdGlobal">
+            <div class="sd-desc">모든 AI에 동일하게 적용</div>
+            <textarea id="sysPromptGlobal" class="sd-input" placeholder="예: 너는 전문 번역가야. 모든 답변을 한국어로 해줘." rows="3"></textarea>
+            <div class="sd-presets">
+              <div class="sd-preset" data-v="너는 전문 번역가야. 모든 답변을 한국어로 해줘.">🌐 번역가</div>
+              <div class="sd-preset" data-v="너는 시니어 개발자야. 코드 리뷰를 해줘.">💻 개발자</div>
+              <div class="sd-preset" data-v="초등학생도 이해할 수 있게 쉽게 설명해줘.">📚 쉬운 설명</div>
+              <div class="sd-preset" data-v="핵심만 간결하게 3줄 이내로 답변해줘.">⚡ 간결 모드</div>
+            </div>
+          </div>
+
+          <!-- AI별 모드 -->
+          <div class="sd-panel" id="sdEach" style="display:none">
+            <div class="sd-desc">AI별로 다르게 설정</div>
+            <div class="sd-ai-item">
+              <div class="sd-ai-label"><span class="sd-ai-dot" style="background:var(--chatgpt)"></span>ChatGPT</div>
+              <textarea id="sysPrompt-chatgpt" class="sd-input sd-input-sm" placeholder="ChatGPT용 시스템 프롬프트" rows="2"></textarea>
+            </div>
+            <div class="sd-ai-item">
+              <div class="sd-ai-label"><span class="sd-ai-dot" style="background:var(--claude)"></span>Claude</div>
+              <textarea id="sysPrompt-claude" class="sd-input sd-input-sm" placeholder="Claude용 시스템 프롬프트" rows="2"></textarea>
+            </div>
+            <div class="sd-ai-item">
+              <div class="sd-ai-label"><span class="sd-ai-dot" style="background:var(--gemini)"></span>Gemini</div>
+              <textarea id="sysPrompt-gemini" class="sd-input sd-input-sm" placeholder="Gemini용 시스템 프롬프트" rows="2"></textarea>
+            </div>
+            <div class="sd-ai-item">
+              <div class="sd-ai-label"><span class="sd-ai-dot" style="background:var(--perplexity)"></span>Perplexity</div>
+              <textarea id="sysPrompt-perplexity" class="sd-input sd-input-sm" placeholder="Perplexity용 시스템 프롬프트" rows="2"></textarea>
+            </div>
+          </div>
+
+          <div class="sd-actions">
+            <button class="sd-clear" id="sysPromptClear">초기화</button>
+            <button class="sd-save" id="sysPromptSave">저장</button>
+          </div>
+        </div>
+      </div>
+      <button class="filter-btn" id="themeBtn" title="다크/라이트 모드 전환">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      </button>
+      <small>v6.4</small>
+    </div>
+  </div>
+
+  <div class="unified">
+    <div class="unified-label">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      전체 전송
+      <label class="auto-switch-inline" id="autoSwitchLabel">
+        <span class="auto-switch-text">탭 이동</span>
+        <div class="toggle-switch" id="autoSwitchToggle">
+          <div class="toggle-knob"></div>
+        </div>
+      </label>
+    </div>
+    <div class="chips" id="chips">
+      <div class="chip chatgpt active" data-t="chatgpt"><span class="dot"></span>ChatGPT</div>
+      <div class="chip claude active" data-t="claude"><span class="dot"></span>Claude</div>
+      <div class="chip gemini active" data-t="gemini"><span class="dot"></span>Gemini</div>
+      <div class="chip perplexity active" data-t="perplexity"><span class="dot"></span>Perplexity</div>
+    </div>
+    <div class="u-row">
+      <textarea id="uniQ" placeholder="여기에 입력하면 선택한 AI에 동시 전송 (Enter)" rows="1"></textarea>
+      <button class="u-send" id="uniSend">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        전체
+      </button>
+    </div>
+  </div>
+
+  <div class="main-scroll" id="mainScroll">
+    <div id="cards"></div>
+
+    <div class="section" id="favSection">
+      <div class="section-hdr">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          즐겨찾기 프롬프트
+        </div>
+      </div>
+      <div class="fav-list" id="favList"></div>
+      <div class="fav-add-row">
+        <input id="favInput" placeholder="새 프롬프트 추가..." maxlength="100">
+        <button class="fav-add-btn" id="favAddBtn">추가</button>
+      </div>
+    </div>
+
+    <div class="section" id="histSection">
+      <div class="section-hdr">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          질문 히스토리
+        </div>
+        <button class="section-action" id="histClear">전체 삭제</button>
+      </div>
+      <div class="hist-list" id="histList"></div>
+    </div>
+  </div>
+
+  <div class="toast-area" id="toasts"></div>
+  <script src="panel.js"></script>
+</body>
+</html>
