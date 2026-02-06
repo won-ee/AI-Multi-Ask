@@ -56,7 +56,7 @@
 ## 설치
 
 ### 크롬 웹스토어
-> 준비 중
+> https://chromewebstore.google.com/detail/AI%20Multi-Ask/ohgkidnkagciohkcdjccihmhpgfkjpjh?hl=ko
 
 ### 수동 설치
 1. 이 레포를 클론 또는 ZIP 다운로드
